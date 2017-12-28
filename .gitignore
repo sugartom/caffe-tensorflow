@@ -9,3 +9,4 @@
 *.pyc
 
 MNIST_data/*
+caffe_mnist/*
