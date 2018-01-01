@@ -10,3 +10,5 @@
 
 MNIST_data/*
 caffe_mnist/*
+examples/imagenet/caffe_googlenet/*
+

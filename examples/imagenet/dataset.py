@@ -19,13 +19,13 @@ def process_image(img, scale, isotropic, crop, mean):
         min_length = tf.minimum(img_shape[0], img_shape[1])
         new_shape = tf.to_int32((scale / min_length) * img_shape)
     else:
-        new_shape = tf.pack([scale, scale])
-    img = tf.image.resize_images(img, new_shape[0], new_shape[1])
+        new_shape = tf.stack([scale, scale])
+    img = tf.image.resize_images(img, new_shape)
     # Center crop
     # Use the slice workaround until crop_to_bounding_box supports deferred tensor shapes
     # See: https://github.com/tensorflow/tensorflow/issues/521
     offset = (new_shape - crop) / 2
-    img = tf.slice(img, begin=tf.pack([offset[0], offset[1], 0]), size=tf.pack([crop, crop, -1]))
+    img = tf.slice(img, begin=tf.stack([offset[0], offset[1], 0]), size=tf.stack([crop, crop, -1]))
     # Mean subtraction
     return tf.to_float(img) - mean
 
@@ -126,7 +126,7 @@ class ImageProducer(object):
         if self.data_spec.expects_bgr:
             # Convert from RGB channel ordering to BGR
             # This matches, for instance, how OpenCV orders the channels.
-            img = tf.reverse(img, [False, False, True])
+            img = tf.reverse(img, [2])
         return img
 
     def process(self):
