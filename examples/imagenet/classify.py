@@ -70,6 +70,7 @@ def classify(model_data_path, image_paths):
         # Perform a forward pass through the network to get the class probabilities
         print('Classifying')
         probs = sesh.run(net.get_output(), feed_dict={input_node: input_images})
+
         display_results([image_paths[i] for i in indices], probs)
 
         # Stop the worker threads
@@ -192,6 +193,109 @@ def tomClassify(model_data_path, image_paths):
         print('Done exporting!')
         # Yitao-TLS-End
 
+def preprocess_image(image_buffer):
+  """Preprocess JPEG encoded bytes to 3D float Tensor."""
+
+  # Decode the string as an RGB JPEG.
+  # Note that the resulting image contains an unknown height and width
+  # that is set dynamically by decode_jpeg. In other words, the height
+  # and width of image is unknown at compile-time.
+  image = tf.image.decode_jpeg(image_buffer, channels=3)
+  # After this point, all image pixels reside in [0,1)
+  # until the very end, when they're rescaled to (-1, 1).  The various
+  # adjust_* ops all require this range for dtype float.
+  image = tf.image.convert_image_dtype(image, dtype=tf.float32)
+  # Crop the central region of the image with an area containing 87.5% of
+  # the original image.
+  image = tf.image.central_crop(image, central_fraction=0.875)
+  # Resize the image to the original height and width.
+  image = tf.expand_dims(image, 0)
+  image = tf.image.resize_bilinear(
+      image, [224, 224], align_corners=False)
+  image = tf.squeeze(image, [0])
+  # Finally, rescale to [-1,1] instead of [0, 1)
+  image = tf.subtract(image, 0.5)
+  image = tf.multiply(image, 2.0)
+  return image
+
+def tomClassify2(model_data_path):
+    '''Classify the given images using GoogleNet.'''
+
+    # Get the data specifications for the GoogleNet model
+    spec = models.get_data_spec(model_class=models.GoogleNet)
+
+    # Create a placeholder for the input image
+    # input_node = tf.placeholder(tf.float32,
+                                # shape=(None, spec.crop_size, spec.crop_size, spec.channels))
+
+    # Construct the network
+
+    # Create an image producer (loads and processes images in parallel)
+    # image_producer = dataset.ImageProducer(image_paths=image_paths, data_spec=spec)
+
+    serialized_tf_example = tf.placeholder(tf.string, name='tf_example')
+    feature_configs = {
+        'image/encoded': tf.FixedLenFeature(
+            shape=[], dtype=tf.string),
+    }
+    tf_example = tf.parse_example(serialized_tf_example, feature_configs)
+    jpegs = tf_example['image/encoded']
+    images = tf.map_fn(preprocess_image, jpegs, dtype=tf.float32)
+
+    net = models.GoogleNet({'data': images})    
+
+    with tf.Session() as sess:
+        # Start the image processing workers
+        # coordinator = tf.train.Coordinator()
+        # threads = image_producer.start(session=sess, coordinator=coordinator)
+
+        # Load the converted parameters
+        print('Loading the model')
+        net.load(model_data_path, sess)
+
+        # Load the input image
+        # print('Loading the images')
+        # indices, input_images = image_producer.get(sess)
+
+        # Perform a forward pass through the network to get the class probabilities
+        # print('Classifying')
+        # probs = sess.run(net.get_output(), feed_dict={input_node: input_images})
+        # display_results([image_paths[i] for i in indices], probs)
+
+        # # Stop the worker threads
+        # coordinator.request_stop()
+        # coordinator.join(threads, stop_grace_period_secs=2)
+
+        # Yitao-TLS-Begin
+        export_path_base = "caffe_googlenet"
+        export_path = os.path.join(
+            compat.as_bytes(export_path_base),
+            compat.as_bytes(str(FLAGS.model_version)))
+        print 'Exporting trained model to', export_path
+        builder = saved_model_builder.SavedModelBuilder(export_path)
+
+        tensor_info_x = tf.saved_model.utils.build_tensor_info(jpegs)
+        tensor_info_y = tf.saved_model.utils.build_tensor_info(net.get_output())
+
+        prediction_signature = tf.saved_model.signature_def_utils.build_signature_def(
+            inputs={'images': tensor_info_x},
+            outputs={'scores': tensor_info_y},
+            method_name=tf.saved_model.signature_constants.PREDICT_METHOD_NAME)
+
+        legacy_init_op = tf.group(tf.tables_initializer(), name='legacy_init_op')
+        builder.add_meta_graph_and_variables(
+            sess, [tf.saved_model.tag_constants.SERVING],
+            signature_def_map={
+                'predict_images':
+                    prediction_signature,
+            },
+            legacy_init_op=legacy_init_op)
+
+        builder.save()
+
+        print('Done exporting!')
+        # Yitao-TLS-End
+
 def main():
     # Parse arguments
     parser = argparse.ArgumentParser()
@@ -200,7 +304,9 @@ def main():
     args = parser.parse_args()
 
     # Classify the image
-    tomClassify(args.model_path, args.image_paths)
+    # classify(args.model_path, args.image_paths)
+    # tomClassify(args.model_path, args.image_paths)
+    tomClassify2(args.model_path)
 
 
 if __name__ == '__main__':
