@@ -11,4 +11,6 @@
 MNIST_data/*
 caffe_mnist/*
 examples/imagenet/caffe_googlenet/*
-
+examples/imagenet/caffe_resnet152/*
+examples/imagenet/caffe_resnet50/*
+examples/imagenet/tomModels/*
