@@ -222,8 +222,9 @@ def tomClassify2(model_data_path):
     '''Classify the given images using GoogleNet.'''
 
     # Get the data specifications for the GoogleNet model
-    # spec = models.get_data_spec(model_class=models.ResNet50)
-    spec = models.get_data_spec(model_class=models.ResNet152)
+    # spec = models.get_data_spec(model_class=models.ResNet50)     # <========================================
+    spec = models.get_data_spec(model_class=models.ResNet101)
+    # spec = models.get_data_spec(model_class=models.ResNet152)
 
     # Create a placeholder for the input image
     # input_node = tf.placeholder(tf.float32,
@@ -243,8 +244,9 @@ def tomClassify2(model_data_path):
     jpegs = tf_example['image/encoded']
     images = tf.map_fn(preprocess_image, jpegs, dtype=tf.float32)
 
-    # net = models.ResNet50({'data': images})    
-    net = models.ResNet152({'data': images})    
+    # net = models.ResNet50({'data': images})    # <========================================
+    net = models.ResNet101({'data': images})    
+    # net = models.ResNet152({'data': images})    
 
     with tf.Session() as sess:
         # Start the image processing workers
@@ -269,8 +271,9 @@ def tomClassify2(model_data_path):
         # coordinator.join(threads, stop_grace_period_secs=2)
 
         # Yitao-TLS-Begin
-        # export_path_base = "caffe_resnet50"
-        export_path_base = "caffe_resnet152"
+        # export_path_base = "caffe_resnet50"       # <========================================
+        export_path_base = "caffe_resnet101"
+        # export_path_base = "caffe_resnet152"
         export_path = os.path.join(
             compat.as_bytes(export_path_base),
             compat.as_bytes(str(FLAGS.model_version)))

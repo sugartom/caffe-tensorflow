@@ -66,6 +66,10 @@ class Network(object):
                     except ValueError:
                         if not ignore_missing:
                             raise
+                # var = tf.get_variable("weights")
+                # session.run(var.assign(data_dict[op_name][0]))
+                # var = tf.get_variable("biases")
+                # session.run(var.assign(data_dict[op_name][1]))
 
     def feed(self, *args):
         '''Set the input(s) for the next operation by replacing the terminal nodes.
@@ -130,11 +134,14 @@ class Network(object):
                 output = convolve(input, kernel)
             else:
                 # Split the input into groups and then convolve each of them independently
-                input_groups = tf.split(3, group, input)
-                kernel_groups = tf.split(3, group, kernel)
+                # input_groups = tf.split(3, group, input)
+                input_groups = tf.split(input, group, 3)
+                # kernel_groups = tf.split(3, group, kernel)
+                kernel_groups = tf.split(kernel, group, 3)
                 output_groups = [convolve(i, k) for i, k in zip(input_groups, kernel_groups)]
                 # Concatenate the groups
-                output = tf.concat(3, output_groups)
+                # output = tf.concat(3, output_groups)
+                output = tf.concat(output_groups, 3)
             # Add the biases
             if biased:
                 biases = self.make_var('biases', [c_o])
