@@ -17,3 +17,4 @@ examples/imagenet/caffe_resnet50/*
 examples/imagenet/tomModels/*
 examples/imagenet/caffe_vgg/*
 examples/imagenet/caffe_alexnet/*
+caffe_openpose/*
